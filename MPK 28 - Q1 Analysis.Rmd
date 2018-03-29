@@ -15,4 +15,47 @@ library(highfrequency)
 library(tibble)
 ```
 
-adfadfasdfadsf
+```{r Import & Combine Data}
+##create a vector of all csv file names
+months <- c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+for(j in 1:2){
+  folder <- paste("C:/Users/BryanHee/Documents/MPK 28/2018/", months[j],"/", sep = "")
+  files <- list.files(path = folder)
+
+  ##loop to create 15min xts files from each csv file 
+  for(i in 1:length(files)){
+    temp <- read.csv(paste(folder, files[i], sep = ""), sep = ",")
+    
+    #remove events column
+    temp$Events <- NULL
+    temp$Time <- as.POSIXct(temp$Time)
+    
+    #force temp to xts
+    temp <- xts(temp, order.by = temp$Time)
+    temp$Time <- NULL
+    
+    #force xts to 15 min intervals - THIS IS OFF BY 8 HOURS!?!
+    my_mean <- function(x){mean(as.numeric(x), na.rm = TRUE)}
+    temp = aggregatets(temp, FUN = "my_mean", on = "minutes", k = 15)
+    
+    if(j==1 & i==1) {
+    all_data <- temp
+    } else if(j==1) {
+      all_data <- cbind(all_data, temp)
+    } #else {
+            #THIS ISN'T GOING TO WORK!!! NEED TO MAKE SURE ALL OF THE COLUMN NAMES ARE LINED UP CORRECTLY
+    # all_data <- do.call(rbind, lapply(l, function(x) x[match(names(l[[1]]), names(x))]))
+    # all_data <- rbind(all_data, temp)
+    #}
+  }
+  }
+
+##Finally output to csv
+#all_data <- write.csv(all_data, paste(folder, "all data.csv", sep = ""))
+```
+
+
+```{r VAV Boxes w/ DCV}
+all_dcv <- grep("VAV|CO2", names(all_data), ignore.case = TRUE)
+```
+
