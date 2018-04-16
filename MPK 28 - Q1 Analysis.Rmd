@@ -18,8 +18,8 @@ library(tibble)
 ```{r Import & Combine Data}
 ##create a vector of all csv file names
 months <- c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
-for(j in 1:2){
-  folder <- paste("C:/Users/BryanHee/Documents/MPK 28/2018/", months[j],"/", sep = "")
+for(j in 3:3){
+  folder <- paste("C:/Users/BryanHee/Downloads/MPK 28/", months[j],"/", sep = "")
   files <- list.files(path = folder)
 
   ##loop to create 15min xts files from each csv file 
@@ -31,16 +31,16 @@ for(j in 1:2){
     temp$Time <- as.POSIXct(temp$Time)
     
     #force temp to xts
-    temp <- xts(temp, order.by = temp$Time)
+    temp <- xts(temp, order.by = temp$Time, tzone = "America/Los_Angeles")
     temp$Time <- NULL
     
     #force xts to 15 min intervals - THIS IS OFF BY 8 HOURS!?!
     my_mean <- function(x){mean(as.numeric(x), na.rm = TRUE)}
     temp = aggregatets(temp, FUN = "my_mean", on = "minutes", k = 15)
     
-    if(j==1 & i==1) {
+    if(j==3 & i==1) {
     all_data <- temp
-    } else if(j==1) {
+    } else if(j==3) {
       all_data <- cbind(all_data, temp)
     } #else {
             #THIS ISN'T GOING TO WORK!!! NEED TO MAKE SURE ALL OF THE COLUMN NAMES ARE LINED UP CORRECTLY
@@ -51,11 +51,34 @@ for(j in 1:2){
   }
 
 ##Finally output to csv
-#all_data <- write.csv(all_data, paste(folder, "all data.csv", sep = ""))
+all_data <- write.csv(all_data, paste(folder, "all data.csv", sep = ""))
 ```
 
 
 ```{r VAV Boxes w/ DCV}
-all_dcv <- grep("VAV|CO2", names(all_data), ignore.case = TRUE)
+grep("CO2", names(all_data), ignore.case = TRUE) -> test
+  all_data[,test] -> all_dcv
+  rm(test)
+grep("SP", names(all_dcv), ignore.case = TRUE) -> test
+  all_dcv[,test] -> dcv_setpoint
+  all_dcv[,-test] -> dcv_actual
+
+hour <- as.POSIXlt(time(dcv_actual))$hour
+VAV_CO2 = as.tibble(dcv_actual)
+VAV_CO2 <- mutate(VAV_CO2, hour = hour)
+
+str(VAV_CO2) 
+
+
+%>%
+  group_by(
+
+  ggplot(data = VAV_CO2) +
+    geom_point(mapping = aes(x = hour, y = VAV_CO2$MPK0028.02.CNF.VAV14RH.CO2), alpha = 0.08) +
+    geom_point(mapping = aes(x = hour, y = VAV_CO2$MPK0028.02.CNF.VAV30RH.CO2), alpha = 0.08) +
+    geom_point(mapping = aes(x = hour, y = VAV_CO2$MPK0028.02.CNF.VAV32RH.CO2), alpha = 0.08)
+
+
+length(all_dcv)
 ```
 
